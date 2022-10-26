@@ -668,13 +668,14 @@ public Image(Device device, ImageFileNameProvider imageFileNameProvider) {
 	super(device);
 	this.imageFileNameProvider = imageFileNameProvider;
 	currentDeviceZoom = DPIUtil.getDeviceZoom ();
-	boolean[] found = new boolean[1];
+	boolean[] found = new boolean[2];
 	String fileName = DPIUtil.validateAndGetImagePathAtZoom (imageFileNameProvider, currentDeviceZoom, found);
 	if (found[0]) {
 		initNative (fileName);
 		if (this.handle == 0) init(new ImageData (fileName));
 	} else {
-		ImageData resizedData = DPIUtil.autoScaleUp (device, new ImageData (fileName));
+		int from = (found[1] ? 200 : 100);
+		ImageData resizedData = DPIUtil.autoScaleImageData (device, new ImageData (fileName), currentDeviceZoom, from);
 		init(resizedData);
 	}
 	init();
@@ -713,12 +714,13 @@ public Image(Device device, ImageDataProvider imageDataProvider) {
 	super(device);
 	this.imageDataProvider = imageDataProvider;
 	currentDeviceZoom = DPIUtil.getDeviceZoom ();
-	boolean[] found = new boolean[1];
-	ImageData data =  DPIUtil.validateAndGetImageDataAtZoom(imageDataProvider, currentDeviceZoom, found);
+	boolean[] found = new boolean[2];
+	ImageData data = DPIUtil.validateAndGetImageDataAtZoom (imageDataProvider, currentDeviceZoom, found);
 	if (found[0]) {
 		init(data);
 	} else {
-		ImageData resizedData = DPIUtil.autoScaleUp(device, data);
+		int from = (found[1] ? 200 : 100);
+		ImageData resizedData = DPIUtil.autoScaleImageData (device, data, currentDeviceZoom, from);
 		init (resizedData);
 	}
 	init();
@@ -1352,22 +1354,32 @@ public ImageData getImageData (int zoom) {
 	if (zoom == currentDeviceZoom) {
 		return getImageDataAtCurrentZoom();
 	} else if (imageDataProvider != null) {
-		boolean[] found = new boolean[1];
+		boolean[] found = new boolean[2];
 		ImageData data = DPIUtil.validateAndGetImageDataAtZoom (imageDataProvider, zoom, found);
-		// exact image found
+		// Image found at the requested zoom level
 		if (found[0]) {
 			return data;
 		}
-		// AutoScale the image at 100% zoom
+		// Requested image was not found, but there is a high DPI one, so AutoScale that
+		// one at 200%
+		if (found[1]) {
+			return DPIUtil.autoScaleImageData (device, data, zoom, 200);
+		}
+		// AutoScale the 100% zoom fallback image
 		return DPIUtil.autoScaleImageData (device, data, zoom, 100);
 	} else if (imageFileNameProvider != null) {
-		boolean[] found = new boolean[1];
+		boolean[] found = new boolean[2];
 		String fileName = DPIUtil.validateAndGetImagePathAtZoom (imageFileNameProvider, zoom, found);
-		// exact image found
+		// Image found at the requested zoom level
 		if (found[0]) {
 			return new ImageData (fileName);
 		}
-		// AutoScale the image at 100% zoom
+		// Requested image was not found, but there is a high DPI one, so AutoScale that
+		// one at 200%
+		if (found[1]) {
+			return DPIUtil.autoScaleImageData (device, new ImageData (fileName), zoom, 200);
+		}
+		// AutoScale the 100% zoom fallback image
 		return DPIUtil.autoScaleImageData (device, new ImageData (fileName), zoom, 100);
 	} else {
 		return DPIUtil.autoScaleImageData (device, getImageDataAtCurrentZoom (), zoom, currentDeviceZoom);

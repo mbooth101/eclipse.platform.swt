@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 IBM Corporation and others.
+ * Copyright (c) 2022, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -405,10 +405,18 @@ public static int mapDPIToZoom (int dpi) {
  */
 public static ImageData validateAndGetImageDataAtZoom (ImageDataProvider provider, int zoom, boolean[] found) {
 	if (provider == null) SWT.error (SWT.ERROR_NULL_ARGUMENT);
+	// Get image at requested zoom level
 	ImageData data = provider.getImageData (zoom);
 	found [0] = (data != null);
-	/* If image is null when (zoom != 100%), fall-back to image at 100% zoom */
-	if (zoom != 100 && !found [0]) data = provider.getImageData (100);
+	if (!found [0]) {
+		// If image was null at the requested zoom level, see if there is a 200% version
+		data = provider.getImageData (200);
+		found [1] = (data != null);
+		if (!found [1]) {
+			// If image was at the requested zoom level AND there is no 200% image, fall-back to the 100% image
+			data = provider.getImageData (100);
+		}
+	}
 	if (data == null) SWT.error (SWT.ERROR_INVALID_ARGUMENT, null, ": ImageDataProvider [" + provider + "] returns null ImageData at 100% zoom.");
 	return data;
 }
@@ -420,10 +428,18 @@ public static ImageData validateAndGetImageDataAtZoom (ImageDataProvider provide
  */
 public static String validateAndGetImagePathAtZoom (ImageFileNameProvider provider, int zoom, boolean[] found) {
 	if (provider == null) SWT.error (SWT.ERROR_NULL_ARGUMENT);
+	// Get image at requested zoom level
 	String filename = provider.getImagePath (zoom);
 	found [0] = (filename != null);
-	/* If image is null when (zoom != 100%), fall-back to image at 100% zoom */
-	if (zoom != 100 && !found [0]) filename = provider.getImagePath (100);
+	if (!found [0]) {
+		// If image was null at the requested zoom level, see if there is a 200% version
+		filename = provider.getImagePath (200);
+		found [1] = (filename != null);
+		if (!found [1]) {
+			// If image was at the requested zoom level AND there is no 200% image, fall-back to the 100% image
+			filename = provider.getImagePath (100);
+		}
+	}
 	if (filename == null) SWT.error (SWT.ERROR_INVALID_ARGUMENT, null, ": ImageFileNameProvider [" + provider + "] returns null filename at 100% zoom.");
 	return filename;
 }

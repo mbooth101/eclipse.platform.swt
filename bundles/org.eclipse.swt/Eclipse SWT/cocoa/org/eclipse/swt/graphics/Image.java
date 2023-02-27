@@ -772,14 +772,20 @@ public Image(Device device, ImageFileNameProvider imageFileNameProvider) {
 	if (imageFileNameProvider == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
 	this.imageFileNameProvider = imageFileNameProvider;
 	String filename = imageFileNameProvider.getImagePath(100);
-	if (filename == null) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+	String filename2x = imageFileNameProvider.getImagePath(200);
+	if (filename == null && filename2x == null) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 	NSAutoreleasePool pool = null;
 	if (!NSThread.isMainThread()) pool = (NSAutoreleasePool) new NSAutoreleasePool().alloc().init();
 	try {
-		initNative(filename);
-		if (this.handle == null) init(new ImageData(filename));
+		if (filename != null) {
+			initNative(filename);
+			if (this.handle == null) init(new ImageData(filename));
+		} else {
+			// If 1x image is missing, but 2x is present, then scale down the 2x image for 1x usage
+			ImageData resized = DPIUtil.autoScaleImageData (device, new ImageData(filename2x), 100, 200);
+			init (resized);
+		}
 		init();
-		String filename2x = imageFileNameProvider.getImagePath(200);
 		if (filename2x != null) {
 			alphaInfo_200 = new AlphaInfo();
 			id id = NSImageRep.imageRepWithContentsOfFile(NSString.stringWith(filename2x));
@@ -825,13 +831,19 @@ public Image(Device device, ImageDataProvider imageDataProvider) {
 	if (imageDataProvider == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
 	this.imageDataProvider = imageDataProvider;
 	ImageData data = imageDataProvider.getImageData (100);
-	if (data == null) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+	ImageData data2x = imageDataProvider.getImageData (200);
+	if (data == null && data2x == null) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 	NSAutoreleasePool pool = null;
 	if (!NSThread.isMainThread()) pool = (NSAutoreleasePool) new NSAutoreleasePool().alloc().init();
 	try {
-		init (data);
+		if (data != null) {
+			init (data);
+		} else {
+			// If 1x image is missing, but 2x is present, then scale down the 2x image for 1x usage
+			ImageData resized = DPIUtil.autoScaleImageData (device, data2x, 100, 200);
+			init (resized);
+		}
 		init ();
-		ImageData data2x = imageDataProvider.getImageData (200);
 		if (data2x != null) {
 			alphaInfo_200 = new AlphaInfo();
 			NSBitmapImageRep rep = createRepresentation (data2x, alphaInfo_200);
